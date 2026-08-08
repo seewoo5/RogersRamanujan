@@ -137,22 +137,17 @@ theorem enormAt_prod_one_add_sub_one_le {ι : Type*} (s : Finset ι) (f : ι →
   induction s using Finset.induction with
   | empty => simp
   | insert j s hj ih =>
-    set B := ∏ i ∈ s, (enormAt φ q (f i) + 1) with hB
+    set B := ∏ i ∈ s, (enormAt φ q (f i) + 1)
     have hprod : enormAt φ q (∏ i ∈ s, (1 + f i)) ≤ B := by
-      refine le_trans ?_ ih
-      calc enormAt φ q (∏ i ∈ s, (1 + f i))
-          = enormAt φ q ((∏ i ∈ s, (1 + f i) - 1) + 1) := by ring_nf
-        _ ≤ enormAt φ q (∏ i ∈ s, (1 + f i) - 1) + enormAt φ q (1 : R⟦X⟧) := enormAt_add_le _ _
-        _ = enormAt φ q (∏ i ∈ s, (1 + f i) - 1) + 1 := by rw [enormAt_one]
-    have hsplit : ∏ i ∈ insert j s, (1 + f i) - 1
-        = (∏ i ∈ s, (1 + f i) - 1) + f j * ∏ i ∈ s, (1 + f i) := by
-      rw [prod_insert hj]; ring
-    rw [hsplit, prod_insert hj]
+      have h := enormAt_add_le (φ := φ) (q := q) (∏ i ∈ s, (1 + f i) - 1) 1
+      rw [sub_add_cancel, enormAt_one] at h
+      exact h.trans ih
+    rw [prod_insert hj, prod_insert hj, show (1 + f j) * ∏ i ∈ s, (1 + f i) - 1
+      = (∏ i ∈ s, (1 + f i) - 1) + f j * ∏ i ∈ s, (1 + f i) from by ring]
     calc enormAt φ q ((∏ i ∈ s, (1 + f i) - 1) + f j * ∏ i ∈ s, (1 + f i)) + 1
-        ≤ (enormAt φ q (∏ i ∈ s, (1 + f i) - 1) + enormAt φ q (f j * ∏ i ∈ s, (1 + f i))) + 1 :=
-          add_le_add (enormAt_add_le _ _) le_rfl
-      _ = (enormAt φ q (∏ i ∈ s, (1 + f i) - 1) + 1)
-            + enormAt φ q (f j * ∏ i ∈ s, (1 + f i)) := by ring
+        ≤ (enormAt φ q (∏ i ∈ s, (1 + f i) - 1) + 1)
+            + enormAt φ q (f j * ∏ i ∈ s, (1 + f i)) := by
+          rw [add_right_comm]; exact add_le_add (enormAt_add_le _ _) le_rfl
       _ ≤ B + enormAt φ q (f j) * B :=
           add_le_add ih ((enormAt_mul_le _ _).trans (by gcongr))
       _ = (enormAt φ q (f j) + 1) * B := by ring
@@ -199,9 +194,7 @@ theorem evalAt_mul {f g : R⟦X⟧} (hf : enormAt φ q f ≠ ⊤) (hg : enormAt 
   refine tsum_congr fun n ↦ ?_
   rw [coeff_mul, map_sum, sum_mul]
   refine sum_congr rfl fun p hp ↦ ?_
-  rw [mem_antidiagonal] at hp
-  rw [map_mul, ← hp, pow_add]
-  ring
+  rw [map_mul, ← mem_antidiagonal.mp hp, pow_add, mul_mul_mul_comm]
 
 theorem evalAt_prod {ι : Type*} (s : Finset ι) (f : ι → R⟦X⟧)
     (hf : ∀ i ∈ s, enormAt φ q (f i) ≠ ⊤) :
@@ -293,15 +286,13 @@ variable {R : Type*} [CommRing R] {φ : R →+* ℂ} {q : ℂ} (c : R) (d : ℕ)
 theorem enormAt_qPochhammerInf_sub_one_le (ht : ‖q‖ < 1) :
     enormAt φ q ((C c * X ^ d; X)_∞ - 1)
       ≤ ENNReal.ofReal (Real.exp (‖φ c‖ * ‖q‖ ^ d / (1 - ‖q‖)) - 1) := by
-  have hexp : (1 : ℝ) ≤ Real.exp (‖φ c‖ * ‖q‖ ^ d / (1 - ‖q‖)) :=
-    Real.one_le_exp (by positivity)
+  have hexp : (0 : ℝ) ≤ Real.exp (‖φ c‖ * ‖q‖ ^ d / (1 - ‖q‖)) - 1 :=
+    sub_nonneg.mpr (Real.one_le_exp (by positivity))
   refine enormAt_le_of_tendsto (u := atTop)
-    ((tendsto_qPochhammer_qPochhammerInf (by simp)).sub tendsto_const_nhds) fun N ↦ ?_
-  have h1 : enormAt φ q ((C c * X ^ d; X)_N - 1) + 1
-      ≤ ENNReal.ofReal (Real.exp (‖φ c‖ * ‖q‖ ^ d / (1 - ‖q‖)) - 1) + 1 := by
-    refine (enormAt_qPochhammer_sub_one_le c d N).trans ((prod_enorm_le_exp c d ht N).trans ?_)
-    rw [← ENNReal.ofReal_one, ← ENNReal.ofReal_add (by linarith) zero_le_one, sub_add_cancel]
-  exact (ENNReal.add_le_add_iff_right ENNReal.one_ne_top).mp h1
+    ((tendsto_qPochhammer_qPochhammerInf (by simp)).sub tendsto_const_nhds) fun N ↦
+    (ENNReal.add_le_add_iff_right ENNReal.one_ne_top).mp
+      ((enormAt_qPochhammer_sub_one_le c d N).trans ((prod_enorm_le_exp c d ht N).trans ?_))
+  rw [← ENNReal.ofReal_one, ← ENNReal.ofReal_add hexp zero_le_one, sub_add_cancel]
 
 theorem enormAt_qPochhammerInf_ne_top (ht : ‖q‖ < 1) : enormAt φ q ((C c * X ^ d; X)_∞) ≠ ⊤ := by
   refine ne_top_of_le_ne_top
@@ -446,6 +437,19 @@ theorem evalAt_jtp_summand (ha : a ≠ 0) (n : ℤ) :
       = (-1) ^ n.natAbs * a ^ n * q ^ jtpDeg n := by
   rw [evalAt_C_mul_X_pow, map_mul, map_pow, map_neg, map_one, laurentEval_T]
 
+/-- The `n`-th summand of the formal Jacobi triple product evaluates to the `n`-th summand of the
+complex one, for the splitting `a * (a⁻¹ * q) = q`. -/
+theorem evalAt_jtp_summand_eq_abPow (ha : a ≠ 0) (n : ℤ) :
+    evalAt (laurentEval a ha) q (C ((-1) ^ n.natAbs * T n) * X ^ jtpDeg n)
+      = abPow (-a) (-(a⁻¹ * q)) n * q ^ n.natAbs.choose 2 := by
+  rw [evalAt_jtp_summand ha]
+  obtain ⟨k, rfl | rfl⟩ := n.eq_nat_or_neg
+  · rw [abPow_nat, jtpDeg_nat, Int.natAbs_natCast, zpow_natCast]
+    ring
+  · rw [abPow_neg_nat, jtpDeg_neg_nat, Int.natAbs_neg, Int.natAbs_natCast, zpow_neg, zpow_natCast,
+      ← inv_pow, pow_add]
+    ring
+
 theorem norm_evalAt_jtp_summand (ha : a ≠ 0) (n : ℤ) (m : ℕ) :
     ‖laurentEval a ha ((C ((-1) ^ n.natAbs * T n) * X ^ jtpDeg n : ℤ[T;T⁻¹]⟦X⟧).coeff m) * q ^ m‖
       = if m = jtpDeg n then ‖a ^ n‖ * ‖q‖ ^ m else 0 := by
@@ -482,42 +486,26 @@ theorem jacobi_triple_product_hasSum'_complex_of_ne_zero
     (ha : a ≠ 0) (hq : ‖q‖ < 1) (hab : a * b = q) :
     HasSum (fun n : ℤ ↦ abPow (-a) (-b) n * q ^ n.natAbs.choose 2)
       ((q; q)_∞ * (a; q)_∞ * (b; q)_∞) := by
+  obtain rfl : b = a⁻¹ * q := by rw [← hab, ← mul_assoc, inv_mul_cancel₀ ha, one_mul]
   set φ := laurentEval a ha with hφ
-  have hb : b = a⁻¹ * q := by rw [← hab, ← mul_assoc, inv_mul_cancel₀ ha, one_mul]
-  -- the three factors of the formal product, evaluated
   have p1 : evalAt φ q ((X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧) = ((q; q)_∞ : ℂ) := by
-    simpa using (qPochhammerInf_eq_evalAt (φ := φ) (q := q) (1 : ℤ[T;T⁻¹]) 1 hq).symm
+    simpa using (qPochhammerInf_eq_evalAt (φ := φ) (1 : ℤ[T;T⁻¹]) 1 hq).symm
   have p2 : evalAt φ q ((C (T 1); X)_∞ : ℤ[T;T⁻¹]⟦X⟧) = ((a; q)_∞ : ℂ) := by
-    simpa [hφ] using (qPochhammerInf_eq_evalAt (φ := φ) (q := q) (T 1) 0 hq).symm
-  have p3 : evalAt φ q ((C (T (-1)) * X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧) = ((b; q)_∞ : ℂ) := by
-    rw [hb]
-    simpa [hφ] using (qPochhammerInf_eq_evalAt (φ := φ) (q := q) (T (-1)) 1 hq).symm
+    simpa [hφ] using (qPochhammerInf_eq_evalAt (φ := φ) (T 1) 0 hq).symm
+  have p3 : evalAt φ q ((C (T (-1)) * X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧) = ((a⁻¹ * q; q)_∞ : ℂ) := by
+    simpa [hφ] using (qPochhammerInf_eq_evalAt (φ := φ) (T (-1)) 1 hq).symm
   have n1 : enormAt φ q ((X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧) ≠ ⊤ := by
-    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (q := q) (1 : ℤ[T;T⁻¹]) 1 hq
+    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (1 : ℤ[T;T⁻¹]) 1 hq
   have n2 : enormAt φ q ((C (T 1); X)_∞ : ℤ[T;T⁻¹]⟦X⟧) ≠ ⊤ := by
-    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (q := q) (T 1) 0 hq
+    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (T 1) 0 hq
   have n3 : enormAt φ q ((C (T (-1)) * X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧) ≠ ⊤ := by
-    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (q := q) (T (-1)) 1 hq
-  have hmul : evalAt φ q ((X; X)_∞ * (C (T 1); X)_∞ * (C (T (-1)) * X; X)_∞ : ℤ[T;T⁻¹]⟦X⟧)
-      = (q; q)_∞ * (a; q)_∞ * (b; q)_∞ := by
-    rw [evalAt_mul (ne_top_of_le_ne_top (ENNReal.mul_ne_top n1 n2) (enormAt_mul_le _ _)) n3,
-      evalAt_mul n1 n2, p1, p2, p3]
-  -- the summands, evaluated
-  have hterm : ∀ n : ℤ, evalAt φ q (C ((-1) ^ n.natAbs * T n) * X ^ jtpDeg n : ℤ[T;T⁻¹]⟦X⟧)
-      = abPow (-a) (-b) n * q ^ n.natAbs.choose 2 := by
-    intro n
-    rw [evalAt_jtp_summand ha]
-    obtain ⟨k, rfl | rfl⟩ := n.eq_nat_or_neg
-    · rw [abPow_nat, jtpDeg_nat, Int.natAbs_natCast, zpow_natCast]
-      ring
-    · rw [abPow_neg_nat, jtpDeg_neg_nat, Int.natAbs_neg, Int.natAbs_natCast, hb, zpow_neg,
-        zpow_natCast, ← inv_pow, pow_add]
-      ring
+    simpa using enormAt_qPochhammerInf_ne_top (φ := φ) (T (-1)) 1 hq
   have hformal := hasSum_jacobi_triple_product_laurentPolynomial
   simp only [jtp_summand_eq] at hformal
   have h := hasSum_evalAt (φ := φ) (q := q) hformal (summable_norm_jtp ha hq)
-  rw [hmul] at h
-  simpa only [hterm] using h
+  rw [evalAt_mul (ne_top_of_le_ne_top (ENNReal.mul_ne_top n1 n2) (enormAt_mul_le _ _)) n3,
+    evalAt_mul n1 n2, p1, p2, p3] at h
+  simpa only [hφ, evalAt_jtp_summand_eq_abPow ha] using h
 
 end Main
 
@@ -544,15 +532,9 @@ theorem jacobi_triple_product_hasSum'_complex_of_eq_zero :
     intro n hn
     simp only [Finset.mem_insert, Finset.mem_singleton, not_or] at hn
     obtain ⟨k, rfl | rfl⟩ := n.eq_nat_or_neg
-    · have hk : k ≠ 0 := by rintro rfl; exact hn.2 rfl
-      simp [abPow_nat, zero_pow hk]
-    · have hk : 2 ≤ k := by
-        rcases k with _ | _ | k
-        · exact absurd (by simp) hn.2
-        · exact absurd (by simp) hn.1
-        · omega
-      have hc : k.choose 2 ≠ 0 := (Nat.choose_pos hk).ne'
-      simp [abPow_neg_nat, zero_pow hc]
+    · simp [abPow_nat, zero_pow fun (hk : k = 0) ↦ hn.2 (by rw [hk]; rfl)]
+    · have hk : 2 ≤ k := by rcases k with _ | _ | k <;> simp_all
+      simp [abPow_neg_nat, zero_pow (Nat.choose_pos hk).ne']
   have h : HasSum (fun n : ℤ ↦ abPow (-(0 : ℂ)) (-b) n * (0 : ℂ) ^ n.natAbs.choose 2)
       (∑ n ∈ ({-1, 0} : Finset ℤ), abPow (-(0 : ℂ)) (-b) n * (0 : ℂ) ^ n.natAbs.choose 2) :=
     hasSum_sum_of_ne_finset_zero hvanish
