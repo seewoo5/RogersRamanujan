@@ -33,10 +33,11 @@ public import RogersRamanujan.NumberTheory.QTheory.Defs
 public import RogersRamanujan.NumberTheory.QTheory.HypergeometricSeries
 public import RogersRamanujan.NumberTheory.QTheory.JacobiTriangular
 public import RogersRamanujan.NumberTheory.QTheory.JacobiTripleProduct.Basic
-public import RogersRamanujan.NumberTheory.QTheory.JacobiTripleProduct.Complex
 public import RogersRamanujan.NumberTheory.QTheory.JacobiTripleProduct.NilpotentUnit
+public import RogersRamanujan.NumberTheory.QTheory.JacobiTripleProduct.NormedRing
 public import RogersRamanujan.NumberTheory.QTheory.JacobiTripleProduct.PowerSeriesIdentity
 public import RogersRamanujan.NumberTheory.QTheory.Nonarchimedean
+public import RogersRamanujan.NumberTheory.QTheory.NormedRing
 public import RogersRamanujan.NumberTheory.QTheory.Pentagonal
 public import RogersRamanujan.NumberTheory.QTheory.RogersRamanujan
 public import RogersRamanujan.NumberTheory.QTheory.StrongNonarchimedean
